@@ -76,6 +76,7 @@ def svm_loss_vectorized(W, X, y, reg):
   # result in loss.                                                           #
   #############################################################################
   scores = X.W
+  correct_class_scores = np.choose(y,scores.T) #choosing correct class scores
   margins = np.maximum(0,scores[])
   #############################################################################
   #                             END OF YOUR CODE                              #

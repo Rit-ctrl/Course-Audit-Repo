@@ -75,7 +75,8 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  scores = X.W
+  margins = np.maximum(0,scores[])
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################

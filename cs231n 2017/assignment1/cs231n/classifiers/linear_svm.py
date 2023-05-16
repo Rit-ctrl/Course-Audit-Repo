@@ -69,15 +69,28 @@ def svm_loss_vectorized(W, X, y, reg):
   """
   loss = 0.0
   dW = np.zeros(W.shape) # initialize the gradient as zero
+  num_train = X.shape[0]
 
   #############################################################################
   # TODO:                                                                     #
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  scores = X.W
+  scores = np.dot(X,W)
   correct_class_scores = np.choose(y,scores.T) #choosing correct class scores
-  margins = np.maximum(0,scores[])
+  
+  mask = np.ones(scores.shape,dtype= bool)
+  mask[range(scores.shape[0]),y] = False
+  margin_sc = scores[mask].reshape(scores.shape[0],scores.shape[1]-1)
+
+  margin = margin_sc - correct_class_scores.reshape(scores.shape[0],-1) + 1
+
+  margin[margin<0] = 0 # don't need less than zero for loss calc
+
+  loss = np.sum(margin)/num_train
+  loss = loss + np.sum(W**2)*reg
+
+  
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -92,7 +105,13 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+  real_margin = scores - correct_class_scores.reshape(scores.shape[0],-1) + 1
+  pos_margin = (real_margin>0).astype(float) # take only >0 margins for gradient calc
+  pos_margin[range(scores.shape[0]),y] = -1*(pos_margin.sum(1) - 1) # sum-1 for ignoring true class , this will take care of gradient of y[i] term in sj - y[i] + 1 
+
+  dW = np.dot(X.T,pos_margin)/num_train + 2*reg*W
+
+
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################

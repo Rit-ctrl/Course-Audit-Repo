@@ -188,6 +188,9 @@ class FullyConnectedNet(object):
         for i in range(self.num_layers-1):
             self.params[f'W{i+1}'] = np.random.normal(0,weight_scale,size = (input_d,hidden_dims[i]))
             self.params[f'b{i+1}'] = np.zeros(shape = (hidden_dims[i]))
+            if use_batchnorm:
+              self.params[f'gamma{i+1}'] = np.ones(shape = (hidden_dims[i]))
+              self.params[f'beta{i+1}'] = np.zeros(shape = (hidden_dims[i]))
 
             input_d = hidden_dims[i]
         
@@ -255,14 +258,18 @@ class FullyConnectedNet(object):
             # {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
         fc_cache = {}
         relu_cache = {}
-        # bn_cache = {}
-        # dropout_cache = {}
+        bn_cache = {}
+        dropout_cache = {}
         batch_size = X.shape[0]
 
         for i in range(self.num_layers-1):
             fc,fc_cache[i+1] = affine_forward(input,self.params[f'W{i+1}'],self.params[f'b{i+1}'])
             #batchnorm
-            relu,relu_cache[i+1] = relu_forward(fc)
+            if self.use_batchnorm:
+                bn,bn_cache[i+1] = batchnorm_forward(fc,self.params['gamma'+str(i+1)], self.params['beta'+str(i+1)],self.bn_params[i])
+                relu,relu_cache[i+1] = relu_forward(bn)
+            else:
+                relu,relu_cache[i+1] = relu_forward(fc)
             #dropout
             input = relu
         
@@ -304,6 +311,10 @@ class FullyConnectedNet(object):
             dup_stream = relu_backward(dup_stream,relu_cache[i])
 
             #batchnorm
+            if self.use_batchnorm:
+              dup_stream,dgamma,dbeta=batchnorm_backward(dup_stream,bn_cache[i])
+              grads[f'gamma{i}'] = dgamma
+              grads[f'beta{i}'] = dbeta
 
             dup_stream,grads[f'W{i}'],grads[f'b{i}'] = affine_backward(dup_stream,fc_cache[i])
             loss += self.reg*0.5*np.sum(np.square(self.params[f'W{i}']))

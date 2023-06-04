@@ -254,7 +254,7 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        input = X
+        input = X.copy()
             # {affine - [batch norm] - relu - [dropout]} x (L - 1) - affine - softmax
         fc_cache = {}
         relu_cache = {}
@@ -271,10 +271,14 @@ class FullyConnectedNet(object):
             else:
                 relu,relu_cache[i+1] = relu_forward(fc)
             #dropout
-            input = relu
+            if self.use_dropout:
+                dropout_act,dropout_cache[i+1] = dropout_forward(relu,self.dropout_param)
+                input = dropout_act.copy()
+            else:
+                input = relu.copy()
         
         #final affine
-        scores,scores_cache = affine_forward(relu,self.params[f'W{self.num_layers}'],self.params[f'b{self.num_layers}'])
+        scores,scores_cache = affine_forward(input,self.params[f'W{self.num_layers}'],self.params[f'b{self.num_layers}'])
             
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -307,7 +311,9 @@ class FullyConnectedNet(object):
 
         for i in range(self.num_layers-1,0,-1):
             #dropout
-
+            if self.use_dropout:
+              dup_stream = dropout_backward(dup_stream,dropout_cache[i])
+              
             dup_stream = relu_backward(dup_stream,relu_cache[i])
 
             #batchnorm

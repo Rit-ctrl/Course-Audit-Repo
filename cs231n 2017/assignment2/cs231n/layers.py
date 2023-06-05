@@ -422,11 +422,48 @@ def conv_forward_naive(x, w, b, conv_param):
     - cache: (x, w, b, conv_param)
     """
     out = None
+    pad_size = conv_param['pad']
+    stride = conv_param['stride']
     ###########################################################################
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+    # x = np.pad(x,pad_size)
+    # for i in range()
+    F,C,HH,WW = w.shape
+    # print(x.shape)
+
+    output_H = 1 + (x.shape[2] + 2*pad_size - HH)//stride
+    output_W = 1 + (x.shape[-1] + 2*pad_size - WW)//stride
+
+    padded_x = (np.pad(x, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)), 'constant'))
+    # print(x.shape)
+    N,C,H,W = x.shape
+
+    
+
+    im2col = np.zeros(shape = (N,C*HH*WW,output_H*output_W))
+    weight_matrix = w.reshape(F,C*HH*WW)
+    out = np.zeros(shape = (N,F,output_H,output_W))
+
+    # for i in range(N):
+    #       col = 0
+    #       for height in range(0,H-HH+1,stride):
+    #         for width in range(0,W-WW+1,stride):
+    #               im2col[i,:,col] = x[i,:,height:height+HH,width:width+WW].flatten()
+    #               col+=1
+    #       product = np.dot(weight_matrix,im2col[i])
+    #       for bias_index in range(b.shape[0]):
+    #           product[:,bias_index] += b[bias_index]
+    #       out[i] = product.reshape(F,output_H,output_W)
+
+    for i in range(N):
+        for f in range(F):
+            for h in range(output_H):
+                for wid in range(output_W):
+                    out[i,f,h,wid] = np.sum(w[f]*padded_x[i,:,stride*h:stride*h+HH,stride*wid:stride*wid+WW]) + b[f]
+            
+                
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -447,11 +484,41 @@ def conv_backward_naive(dout, cache):
     - dw: Gradient with respect to w
     - db: Gradient with respect to b
     """
-    dx, dw, db = None, None, None
+    # dx, dw, db = None, None, None
+    x,w,b,conv_param = cache
+    pad_size = conv_param['pad']
+    stride = conv_param['stride']
+    padded_x = (np.pad(x, ((0, 0), (0, 0), (pad_size, pad_size), (pad_size, pad_size)), 'constant'))
+
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    F,C,HH,WW = w.shape
+    N,C,H,W = x.shape
+    _,_,H_out,W_out = dout.shape
+
+    
+    db = np.zeros_like(b)
+    dw = np.zeros_like(w)
+    dx = np.zeros_like(padded_x)
+
+    for f in range(F): #db = dout so add up all dout elements in corresponding output channel (dout[,i,]) for db[i]
+        db[f] += np.sum(dout[:,f,:,:]) # sum of all elements in that output channel
+ 
+    for i in range(N): # dw = dout * x , so take corresponding input involved in calculating dout element and multiply
+        for f in range(F):
+            for h in range(H_out):
+                for wid in range(W_out):
+                    dw[f] += dout[i,f,h,wid] *  padded_x[i,:,h*stride:h*stride+HH,wid*stride:wid*stride+WW]
+    
+    
+    for i in range(N): # same logic as above
+        for f in range(F):
+            for h in range(H_out):
+                for wid in range(W_out):
+                    dx[i,:,h*stride:h*stride+HH,wid*stride:wid*stride+WW] += dout[i,f,h,wid] * w[f]              
+
+    dx = dx[:,:,pad_size:-pad_size,pad_size:-pad_size] #dropping padded elements from gradient
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

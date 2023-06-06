@@ -540,11 +540,21 @@ def max_pool_forward_naive(x, pool_param):
     - out: Output data
     - cache: (x, pool_param)
     """
-    out = None
+    N,C,H,W = x.shape
+    pool_h = pool_param['pool_height']
+    pool_w = pool_param['pool_width']
+    stride = pool_param['stride']
+    out_H = (H - pool_h)//stride + 1
+    out_W = (W - pool_w)//stride + 1
+    out = np.zeros(shape= (N,C,out_H,out_W))
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    for i in range(N):
+        for c in range(C):
+            for hh in range(out_H):
+                for ww in range(out_W):
+                    out[i,c,hh,ww] = np.max(x[i,c,hh*stride:hh*stride+pool_h,ww*stride:ww*stride+pool_w])
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -563,11 +573,31 @@ def max_pool_backward_naive(dout, cache):
     Returns:
     - dx: Gradient with respect to x
     """
-    dx = None
+    
     ###########################################################################
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
-    pass
+    x,pool_param = cache
+    N,C,out_H,out_W = dout.shape
+    pool_h = pool_param['pool_height']
+    pool_w = pool_param['pool_width']
+    stride = pool_param['stride']
+    _,_,H,W = x.shape
+
+    dx = np.zeros_like(x)
+
+    for i in range(N):
+        for c in range(C):
+            for hh in range(out_H):
+                for ww in range(out_W):
+
+                    rel_coord = np.argmax(x[i,c,hh*stride:hh*stride+pool_h,ww*stride:ww*stride+pool_w])
+                    abs_coord_x,abs_coord_y = np.unravel_index(rel_coord,(pool_h,pool_w))
+                    abs_coord_x += hh*stride
+                    abs_coord_y += ww*stride
+                    dx[i,c,abs_coord_x,abs_coord_y] = dout[i,c,hh,ww]
+                    # dx[i,c,hh*stride:hh*stride+pool_h,ww*stride:ww*stride+pool_w][abs_coord] = dout[i,c,hh,ww]
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

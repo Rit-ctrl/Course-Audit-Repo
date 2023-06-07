@@ -626,7 +626,8 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     - out: Output data, of shape (N, C, H, W)
     - cache: Values needed for the backward pass
     """
-    out, cache = None, None
+    out, cache = np.zeros_like(x), np.zeros_like(x)
+    N,C,H,W = x.shape
 
     ###########################################################################
     # TODO: Implement the forward pass for spatial batch normalization.       #
@@ -635,7 +636,11 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    for c in range(C):
+        for hh in range(H):
+            for ww in range(W):
+               bn_out,bn_cache  = batchnorm_forward(x[:,c,hh,ww].reshape(N,-1),gamma,beta,bn_param) 
+               out[:,c,hh,ww],cache[:,c,hh,ww] = 
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

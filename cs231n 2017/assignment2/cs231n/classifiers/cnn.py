@@ -37,7 +37,11 @@ class ThreeLayerConvNet(object):
         self.params = {}
         self.reg = reg
         self.dtype = dtype
+        C,H,W = input_dim
+        pad = (filter_size-1)//2
+        stride = 1 
 
+        
         ############################################################################
         # TODO: Initialize weights and biases for the three-layer convolutional    #
         # network. Weights should be initialized from a Gaussian with standard     #
@@ -48,7 +52,12 @@ class ThreeLayerConvNet(object):
         # hidden affine layer, and keys 'W3' and 'b3' for the weights and biases   #
         # of the output affine layer.                                              #
         ############################################################################
-        pass
+        self.params['w1'] = np.random.normal(0,scale = weight_scale,size = (num_filters,C,filter_size,filter_size))
+        self.params['b1'] = np.zeros(num_filters,dtype=self.dtype)
+        self.params['w2'] = np.random.normal(0,scale=weight_scale,size=((H//2)*(W//2)*num_filters,hidden_dim))
+        self.params['b2'] = np.zeros(shape=(hidden_dim),dtype= self.dtype)
+        self.params['w3'] = np.random.normal(0,scale=weight_scale,size = (hidden_dim,num_classes))
+        self.params['b3'] = np.zeros(shape=(num_classes),dtype=self.dtype)
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -63,9 +72,11 @@ class ThreeLayerConvNet(object):
 
         Input / output: Same API as TwoLayerNet in fc_net.py.
         """
-        W1, b1 = self.params['W1'], self.params['b1']
-        W2, b2 = self.params['W2'], self.params['b2']
-        W3, b3 = self.params['W3'], self.params['b3']
+        W1, b1 = self.params['w1'], self.params['b1']
+        W2, b2 = self.params['w2'], self.params['b2']
+        W3, b3 = self.params['w3'], self.params['b3']
+
+        #(w - 2* )
 
         # pass conv_param to the forward pass for the convolutional layer
         filter_size = W1.shape[2]
@@ -75,12 +86,22 @@ class ThreeLayerConvNet(object):
         pool_param = {'pool_height': 2, 'pool_width': 2, 'stride': 2}
 
         scores = None
+        N = X.shape[0]
+        #conv - relu - 2x2 max pool - affine - relu - affine - softmax
         ############################################################################
         # TODO: Implement the forward pass for the three-layer convolutional net,  #
         # computing the class scores for X and storing them in the scores          #
         # variable.                                                                #
         ############################################################################
-        pass
+        out,conv_cache = conv_forward_fast(X,self.params['w1'],self.params['b1'],conv_param)
+        out,relu_cache_1 = relu_forward(out)
+        out,max_cache = max_pool_forward_fast(out,pool_param) 
+        # fc_in = out.reshape(N,-1)
+        # print(out.shape)
+        out,fc_relu_cache = affine_relu_forward(out,self.params['w2'],self.params['b2'])
+        out,affine_out_cache = affine_forward(out,self.params['w3'],self.params['b3'])
+
+        scores = out
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -95,7 +116,20 @@ class ThreeLayerConvNet(object):
         # data loss using softmax, and make sure that grads[k] holds the gradients #
         # for self.params[k]. Don't forget to add L2 regularization!               #
         ############################################################################
-        pass
+        #conv - relu - 2x2 max pool - affine - relu - affine - softmax
+
+        loss,dsoft = softmax_loss(scores,y)
+        loss += 0.5*self.reg*(np.sum(np.square(self.params['w2'])) + np.sum(np.square(self.params['w3'])))
+
+        daffine_out,grads['w3'],grads['b3']= affine_backward(dsoft,affine_out_cache)
+        df_fc_relu,grads['w2'],grads['b2'] = affine_relu_backward(daffine_out,fc_relu_cache)
+        dpool = max_pool_backward_fast(df_fc_relu,max_cache)
+        drelu = relu_backward(dpool,relu_cache_1)
+        dx,grads['w1'],grads['b1'] = conv_backward_fast(drelu,conv_cache)
+
+        grads['w2'] += self.reg*self.params['w2'] #0.5 cancels out 2 ie 2*reg*w1 * 0.5
+        grads['w3'] += self.reg*self.params['w3']
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

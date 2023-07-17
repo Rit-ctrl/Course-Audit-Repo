@@ -189,8 +189,8 @@ def word_embedding_forward(x, W):
     - cache: Values needed for the backward pass
     """
     out, cache = None, None
-    N,T = x.shape
-    V,D = W.shape
+    # N,T = x.shape
+    # V,D = W.shape
     ##############################################################################
     # TODO: Implement the forward pass for word embeddings.                      #
     #                                                                            #
